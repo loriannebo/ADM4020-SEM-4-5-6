@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ADM4020 SEM 4 À 6</title>
+<style>
+:root {
+  --bg: #f4f7fb;
+  --card: #ffffff;
+  --text: #172033;
+  --muted: #1858b8;
+  --accent: #1e72d1;
+  --accent2: #2a1ddd;
+  --shadow: 0 12px 35px rgba(31, 41, 55, .12);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 28px 18px 40px;
+}
+h1 { text-align:center; margin: 0 0 8px; font-size: 28px; }
+.subtitle { text-align:center; color:var(--muted); margin-bottom:24px; }
+.counter { text-align:center; color:var(--muted); margin-bottom:18px; font-size:14px; }
+.success-panel { position: sticky; top: 0; z-index: 30; background: rgba(244,247,251,.96); backdrop-filter: blur(8px); padding: 12px 0 14px; margin: 0 0 18px; }
+.success-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; max-width:560px; margin:0 auto 8px; font-size:14px; font-weight:bold; }
+.success-percent { color:#19c909; font-size:22px; font-weight:800; }
+.success-track { max-width:560px; height:10px; margin:0 auto 7px; background:#fecaca; border-radius:999px; overflow:hidden; }
+.success-fill { height:100%; width:100%; background:#20ca4b; border-radius:999px; transition:width .25s ease; }
+.success-details { text-align:center; color:var(--muted); font-size:12px; }
+.grid { display:flex; flex-direction:column; gap:16px; }
+.card-wrap {
+  perspective: 1200px;
+  height: 190px;
+  cursor: pointer;
+}
+.card {
+  width:100%; height:100%;
+  position:relative;
+  transform-style:preserve-3d;
+  transition: transform .6s ease;
+}
+.card.flipped { transform:rotateY(180deg); }
+.face {
+  position:absolute; inset:0;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  background:var(--card);
+  border-radius:18px;
+  box-shadow:var(--shadow);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:28px;
+  font-size:20px;
+  line-height:1.45;
+}
+.front { border-top:5px solid var(--accent); }
+.back {
+  transform:rotateY(180deg);
+  border-top:5px solid #310123;
+  font-size:18px;
+}
+.hint {
+  position:absolute; bottom:10px; left:0; right:0;
+  text-align:center; font-size:12px; color:var(--muted);
+}
+button {
+  display:block;
+  margin:30px auto 0;
+  border:0;
+  border-radius:999px;
+  padding:14px 30px;
+  background:var(--accent);
+  color:white;
+  font-size:17px;
+  font-weight:bold;
+  cursor:pointer;
+  box-shadow:0 8px 20px rgba(49,94,251,.25);
+}
+button:hover { background:var(--accent2); }
+
+.card-wrap { position: relative; }
+.card-wrap.marked .face { border: 3px solid #e53935 !important; }
+.card-wrap.marked .front { border-top: 5px solid #e53935 !important; }
+.mark-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #b71c1c;
+  background: #e53935;
+  padding: 0;
+  margin: 0;
+  z-index: 20;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,.18);
+}
+.mark-btn:hover { background: #c62828; }
+.mark-btn.marked { background: #8b0000; }
+
+/* Bulle flottante des cartes d'erreurs */
+.error-bubble {
+  position: fixed; right: 22px; bottom: 22px; z-index: 1000;
+  width: 62px; height: 62px; border-radius: 50%; margin: 0; padding: 0;
+  background: #e53935; color: #fff; border: 3px solid #fff;
+  box-shadow: 0 5px 18px rgba(0,0,0,.25); font-size: 25px;
+  display: flex; align-items: center; justify-content: center;
+}
+.error-bubble:hover { background: #c62828; }
+.error-badge {
+  position: absolute; top: -6px; right: -5px; min-width: 25px; height: 25px;
+  padding: 0 6px; border-radius: 999px; background: #172033; color: white;
+  border: 2px solid white; font-size: 13px; line-height: 21px; text-align: center;
+}
+.modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 1100;
+  background: rgba(15, 23, 42, .62); padding: 24px;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.error-modal {
+  width: min(850px, 100%); max-height: 88vh; overflow-y: auto;
+  background: var(--bg); border-radius: 18px; padding: 24px; position: relative;
+  box-shadow: 0 18px 60px rgba(0,0,0,.35);
+}
+.modal-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-right: 42px; }
+.modal-header h2 { margin: 0 0 18px; font-size: 22px; }
+.close-modal {
+  position: absolute; top: 12px; right: 12px; margin: 0; width: 38px; height: 38px;
+  padding: 0; border-radius: 50%; background: #e5e7eb; color: #172033; font-size: 25px;
+  box-shadow: none;
+}
+.close-modal:hover { background: #cbd5e1; }
+.error-list { display: flex; flex-direction: column; gap: 14px; }
+.error-card { position: relative; min-height: 145px; background: white; border: 2px solid #e53935;
+  border-top: 5px solid #e53935; border-radius: 14px; padding: 24px 48px 24px 20px;
+  box-shadow: var(--shadow); cursor: pointer; white-space: pre-wrap; line-height: 1.45; }
+.error-card .answer { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid #e5e7eb; }
+.error-card.flipped .answer { display: block; }
+.unmark-btn {
+  position: absolute; top: 8px; right: 8px; margin: 0; padding: 0; width: 20px; height: 20px;
+  min-width: 20px; border-radius: 50%; border: 2px solid #0759b7; background: #1e72d1;
+  box-shadow: 0 2px 5px rgba(0,0,0,.18); z-index: 2;
+}
+.unmark-btn:hover { background: #084f9e; }
+.empty-errors { text-align: center; color: var(--muted); padding: 28px 12px; }
+@media (max-width:600px) {
+  .error-bubble { right: 14px; bottom: 14px; width: 56px; height: 56px; }
+  .modal-overlay { padding: 10px; } .error-modal { padding: 18px 12px; max-height: 92vh; }
+  .modal-header h2 { font-size: 19px; }
+}
+
+@media (max-width:600px) {
+  .card-wrap { height:220px; }
+  .face { font-size:18px; padding:22px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📚 ADM4020 SEM 4 À 6</h1>
+  <div class="subtitle">Clique sur une question pour voir la réponse. Reclique pour revenir à la question.</div>
+  <div class="success-panel" aria-live="polite">
+    <div class="success-heading"><span>✅ Taux de réussite</span><span id="successPercent" class="success-percent">100 %</span></div>
+    <div class="success-track" role="progressbar" aria-label="Taux de réussite" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><div id="successFill" class="success-fill"></div></div>
+    <div id="successDetails" class="success-details">0 carte en rouge · 0 carte réussie sur 0</div>
+  </div>
+  <div class="counter"><span id="count">0</span> cartes</div>
+  <div id="cards" class="grid"></div>
+  <button id="shuffleBtn">🔀 Mélanger</button>
+</div>
+
+<button id="errorBubble" class="error-bubble" type="button" aria-label="Afficher les cartes d'erreurs" title="Afficher les cartes d'erreurs">
+  ⚑ <span id="errorBadge" class="error-badge">0</span>
+</button>
+
+<div id="errorModalOverlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="errorModalTitle">
+  <div class="error-modal">
+    <button id="closeErrorModal" class="close-modal" type="button" aria-label="Fermer">×</button>
+    <div class="modal-header"><h2 id="errorModalTitle">🔴 Mes cartes d'erreurs (<span id="modalErrorCount">0</span>)</h2></div>
+    <div id="errorCardsList" class="error-list"></div>
+  </div>
+</div>
+
+<script>
+const originalCards = [
+  {
+    q: "Quels sont les 5 propriétés d’un bon formulaire?",
+    a: "1) présente des critères de qualité 2) Est exhaustif mais non redondant 3) est facile d’utilisation 4) offre la rétroaction 5) est rentable"
+  },
+  {
+    q: "Qu’est-ce que la validité de contenu?",
+    a: "s’assurer de la validité de l’outil, le formulaire d’évaluation doit présenter suffisamment de critères pour évaluer l’ensemble des facettes de la performance des employés qui occupent le poste"
+  },
+  {
+    q: "Le choix du nombre de formulaires dépend généralement de quels 3 éléments?",
+    a: "1. Quel est l’objectif du système d’évaluation de la performance (administratif, développement, etc.) ? 2. Quelles sont les ressources disponibles pour développer et gérer le système d’évaluation de la performance ? 3. Qu’est-ce qui sera perçu comme acceptable et rentable de la part des membres de l’organisation ?"
+  },
+  {
+    q: "lorsqu’une décision RH est associée au système d’évaluation, notamment en matière de rémunération ou de progression de carrière, on aura tendance à utiliser quelle méthode?",
+    a: "une échelle numérique qui permet de calculer une cote globale de rendement qui servira à la prise de decision"
+  },
+  {
+    q: "Qu’est-ce qu’une échelle SYMÉTRIQUE Vs ASYMÉTRIQUE et comment les différencier?",
+    a: "Échelle symétrique le niveau de performance standard / attendu par l'organisation (ex. « Répond aux attentes » ou « Performance satisfaisante » se situe AU POINT MILIEU de l’échelle (ex : 3/5), tandis que l’échelle asymétrique ne se trouve PAS au milieu et est placé plus bas (ex : 2/5) donc ici on a un plus grand nombre de niveaux pour nuancer les évaluations positive"
+  },
+  {
+    q: "Qu’est-ce qu’on défini par ‘’ système d’évaluation de la performance est utilisé à des fins administratives’’?",
+    a: "c’est-à-dire qu’il sert d’outil de décision RH, par exemple, lorsqu’il est associé au processus de rémunération ou qu’il sert de base à l’attribution des promotions dans l’organisation, calculer la cote globale de rendement des employés peut s’avérer fort utile afin d’appuyer les décisions des gestionnaires"
+  },
+  {
+    q: "Quelles sont les 2 approches afin de déterminer la cote globale d’un employé?",
+    a: ": l’approche mécanique et l’approche basée sur le jugement"
+  },
+  {
+    q: "Qu’est-ce que l’approche mécanique?",
+    a: "consiste à calculer la cote globale à partir des évaluations effectuées dans chaque section du formulaire. Différentes formules sont possibles"
+  },
+  {
+    q: "Que permet un recours à la pondération pour l’évaluateur lorsqu’on calcule une cote globale d’évaluation?",
+    a: "permet ainsi de communiquer à l’évaluateur, de même qu’à l’évalué, ce qui est important pour l’organisation, permettant ainsi un meilleur alignement avec les priorités organisationnelles"
+  },
+  {
+    q: "pour l’approche mécanique est-il obligatoire d’avoir recours à la pondération?",
+    a: "Oui ou non les 2 sont possibles"
+  },
+  {
+    q: "Qu’est-ce que la pondération?",
+    a: "consiste à attribuer un poids différent à chacune des dimensions de l’évaluation de la performance de manière à refléter l’importance des dimensions pour la performance globale du poste"
+  },
+  {
+    q: "Que permet le recours à la pondération?",
+    a: "permet ainsi de communiquer à l’évaluateur, de même qu’à l’évalué, ce qui est important pour l’organisation, permettant ainsi un meilleur alignement avec les priorités organisationnelles"
+  },
+  {
+    q: "Qu’est-ce que l’approche basée sur le jugement?",
+    a: "Contrairement à l’approche mécanique, l’approche basée sur le jugement n’implique pas un calcul rationnel des évaluations des différentes sections, mais repose essentiellement sur l’évaluation générale de la performance de l’employé à la lumière des résultats obtenus dans le formulaire d’évaluation"
+  },
+  {
+    q: "pourquoi certains préfèrent l’approche basée sur le jugement?",
+    a: "parce qu’elle offre une plus grande latitude. Elle permet notamment à l’évaluateur d’ajuster la cote globale en fonction d’éléments liés à la performance de l’employé, mais qui ne seraient pas pris en compte par les mesures des dimensions de performance identifiées dans le formulaire"
+  },
+  {
+    q: "Nomme un point négatif de l’approche basée sur le jugement?",
+    a: "Cependant, comme elle laisse place à plus de subjectivité, elle peut mener à une perception plus grande d’injustice lorsque le résultat de l’évaluation est négatif. Par ailleurs, comme les différentes facettes de la performance ne sont pas pondérées, certains évaluateurs peuvent accorder plus d’importance à certaines facettes, et ce jugement peut varier d’un évaluateur à l’autre, entraînant un problème de fidélité"
+  },
+  {
+    q: "À quoi se rapporte un formulaire d’évaluation pondéré?",
+    a: "À une approche mécanique qui consiste à calculer la cote globale faisant recours à la pondération"
+  },
+  {
+    q: "quelle approche d’évaluation elle a plus fiable entre l’approche mécanique versus l’approche basée sur le jugement global?",
+    a: "L’approche mécanique"
+  },
+  {
+    q: "Vrai ou faux; les cotes d’évaluation exercent un pouvoir de motivation sur les employés?",
+    a: "Faux, pour une majorité d’employés les cotes d’évaluation entraînent davantage de stress que de motivation en activant chez eux des mécanismes cérébraux de défense ou de retrait"
+  },
+  {
+    q: "quelles sont les 3 questions qu’une organisation désirante de s’aventurer dans l’abandon de la côte de performance se doit de considérer avant de faire cette décision?",
+    a: "1) L’entreprise entretient-elle une culture de méritocratie ? 2) Une culture de rétroaction est-elle minimalement présente dans l’entreprise ? 3) L’entreprise est-elle prête à investir les ressources nécessaires liées à la refonte du système de gestion de la performance"
+  },
+  {
+    q: "par qui sont habituellement effectués l’approbation des cotes globales attribué aux employés?",
+    a: "par le supé- rieur immédiat de l’évaluateur et, dans certains cas, par un ou une responsable des ressources humaines"
+  },
+  {
+    q: "quels sont les avantages de l’approbation des cotes globales?",
+    a: "elle permet au gestionnaire qui approuve les cotes de s’assurer d’une certaine uniformité dans l’évaluation de la performance des évaluateurs qui sont sous sa responsabilité. Par exemple, l’approbation des cotes peut être utile afin de cibler les évaluateurs qui auraient une tendance à juger trop sévèrement leurs employés ou, à l’inverse, à faire preuve d’un biais de clémence"
+  },
+  {
+    q: "Que permet l’approbation les cotes globales attribuées aux employés?",
+    a: "permet également d’assurer un suivi auprès des évaluateurs moins expérimentés afin de s’assurer qu’ils comprennent bien les attentes de l’organisation en matière de performance, effectuent bien leur travail d’observation tout au long de l’année et documentent adéquatement la performance des employés sous leur supervision"
+  },
+  {
+    q: "quels sont les avantages d’informatiser l’outil d’évaluation?",
+    a: "1) plus besoins de format papier, 2) + rapide dans tous les sens du terme 3) faciliter la tâche au moment de l’évaluation formelle. 4) regrouper de multiples évaluations de sources distinctes (autre résumé… : faciliter la saisie, le suivi et le stockage de l’information sur la performance des employés, mais également de mettre en lien cette information avec d’autres données recueillies sur les employés et procéder à différentes analyses permettant d’aiguiller la prise de décision des gestionnaires et professionnels RH.)"
+  },
+  {
+    q: "quels sont les avantages d’informatiser l’outil d’évaluation?",
+    a: "1) ’ils peuvent donner lieu à la formulation de commentaires plutôt génériques susceptibles de créer du cynisme de la part de l’employé et réduire l’acceptabilité de l’outil 2) coûts dans les PME"
+  },
+  {
+    q: "Que faut-il faire attention de faire par rapport à l’informatisation d’outil d’évaluation?",
+    a: "attentif à ce que l’outil informatisé ne soit pas perçu comme un moyen de remplacer les échanges de vive voix avec les employés concernant leur performance. Le système ne devrait en aucun cas permettre aux gestionnaires de se déresponsabiliser par rapport à leur rôle de coach auprès des employés"
+  },
+  {
+    q: "Est-ce que L’informatisation n’affecte donc pas le résultat de l’évaluation?",
+    a: "Non Par contre, des employés sondés dans une autre étude ont rapporté une baisse dans la qualité de la rétroaction offerte par les utilisateurs d’un formulaire informatisé"
+  },
+  {
+    q: "Qu’est-il important de se souvenir par rapport à l’efficacité du développement d’outils d’évaluation de qualité?",
+    a: "qu’il faudra que ces outils d’évaluations soient supportés par des pratiques de gestion de la performance cohérentes et adaptées au contexte de l’organisation"
+  },
+  {
+    q: "Qu’est-ce que L’approche d’évaluation préconisée?",
+    a: "une approche multisource qui prévoit une coappréciation (employé et gestionnaire) ainsi qu’une appréciation de la part des clients"
+  },
+  {
+    q: "Qu’est-ce qu’un formulaire de méthode par objectifs comprenant les 4 bon critères favorise?",
+    a: ": a)    l’acceptabilité de l’outil, b)    la confiance et le sentiment de justice envers le système d’évaluation"
+  },
+  {
+    q: "Vrai ou faux; Un formulaire trop long risque d’évacuer des dimensions de la performance importantes, alors qu’un formulaire trop court diminuera la motivation des évaluateurs?",
+    a: "faux! Un formulaire trop court risque d’évacuer des dimensions de la performance importantes, alors qu’un formulaire trop long diminuera la motivation des évaluateurs."
+  },
+  {
+    q: "Vrai ou faux; Les échelles avec 7 ancres de notation sont les plus populaires?",
+    a: "Faux, c’est 5 ancres de notation qui sont les + populaires"
+  },
+  {
+    q: "Vrai ou faux; On peut avoir recours uniquement à une échelle numérique?",
+    a: "Faux, On peut utiliser des étiquettes, adopter une approche plus descriptive ou même utiliser des couleurs. On peut aussi utiliser ces options en combinaison"
+  },
+  {
+    q: "Vrai ou faux; Pour les échelles symétriques, le point milieu de l’échelle correspond à un niveau de performance au-delà ou en deçà des attentes?",
+    a: "Faux il s’agit des échelles asymétriques"
+  },
+  {
+    q: "Vrai ou faux; Les échelles asymétriques avec un petit nombre d’ancres peuvent avoir de meilleures qualités psychométriques?",
+    a: "Faux, les échelles asymétriques avec un grand nombre d’ancres peuvent avoir de meilleures qualités psychométriques"
+  },
+  {
+    q: "Calculer la cote de performance globale est-elle essentielle au processus d’évaluation des employés?",
+    a: "Non mais ça peut être très utile pour appuyer la décision des gestionnaires concernant par exemple en rémunération ou pour une promotion"
+  },
+  {
+    q: "Calculer la cote de performance globale n’est pas essentiel au processus d’évaluation des employés. Cependant, cela peut s’avérer fort utile pour appuyer la décision des gestionnaires concernant, par exemple, une rémunération ou une promotion. Expliquez les trois approches que l’on peut utiliser pour calculer la note globale du rendement d’un employé?",
+    a: "1) L’approche mécanique : Elle consiste en un calcul de la cote globale à partir des cotes dans chaque section du formulaire. Elle peut refléter une moyenne ou une somme, et l’une ou l’autre peut être pondérée ou non, 2) L’approche basée sur le jugement : Elle repose sur une appréciation de la performance de l’employé basée sur l’opinion générale de l’évaluateur. Elle n’implique pas de calcul rationnel des évaluations des différentes sections. 3) L’approche basée sur le jugement : Elle repose sur une appréciation de la performance de l’employé basée sur l’opinion générale de l’évaluateur. Elle n’implique pas de calcul rationnel des évaluations des différentes sections."
+  },
+  {
+    q: "L’informatisation est une pratique courante pour une majorité de grandes organisations. De plus en plus d’entreprises offrent des solutions intégrées de gestion de la performance entièrement informatisées. Donnez trois avantages et trois difficultés ou inconvénients de cette pratique?",
+    a: "Avantages : 1) Élimine la paperasse, 2) Facilite le travail d'évaluation, 3) Facilite l'évaluation multisource. Inconvénients/difficultés : 1) Coûts d'acquisition élevés, 2) Nécessite formation et soutien aux utilisateurs, 3) Peut entrainer une déresponsabilisation de l'évaluateur"
+  },
+  {
+    q: "Pour opérationnaliser un formulaire d’évaluation, quels sont les éléments dont il faut tenir compte?",
+    a: "1) Déterminer le nombre de formulaires, 2) Paramétrer les échelles d’évaluation, 3) Calculer les cotes de performance globales"
+  },
+  {
+    q: "Pour l’élément ‘’déterminer le nombre de formulaires’’ dont il faut prendre compte pour opérationnaliser un formulaire d’évaluation, quels sont les 2 points à retenir?",
+    a: "- Viser un équilibre entre standardisation et personnalisation (ce qui peut se faire en choisissant des catégories de postes), - Acceptable et utile pour les différents acteurs (ce qui peut se faire en créant un comité des acteurs et un projet pilote)"
+  },
+  {
+    q: "Dans une situation ou on a un plan d’évaluation complet, qu’est-ce qu’il pourrait être bon de faire en plus de viser l’équilibre entre standardisation et personnalisation et d’obtenir l’acceptation des acteurs du projet?",
+    a: "puisqu’il est vrai que les échelles d’évaluation à trois niveaux amèneront une centralisation des côtes, c’est mieux de l’éviter. Également, il est important de calculer une note globale pour pouvoir bien comparer chaque employé selon les attentes de l’organisation et prendre des décisions RH ou de rémunération"
+  },
+  {
+    q: "Dans un contexte de développement des compétences, la qualité psychométrique d’un outil devrait-elle primer sur son degré d’acceptabilité sociale, ou l’inverse?",
+    a: "Un bon formulaire doit être rentable pour l’organisation, c’est-à-dire maximiser les bénéfices attendus par rapport à ses coûts de développement et de gestion. Est-il jugé utile par les principaux acteurs? Il est important de bien évaluer la performance de manière à l’encourager, sinon c’est une dépense inutile pour l’organisation. On doit donc trouver un équilibre entre un formulaire de qualité et son degré d’acceptation des acteurs."
+  },
+  {
+    q: "qu’est-ce qu’une approche multisource?",
+    a: "Vu comme une ‘’famille’’ d’approches (c’est un concept général) ces approches dites « multisources » consistent à évaluer la performance d’un individu à partir d’au moins deux perspectives différentes. Autrement dit, dès qu’une organisation consulte une autre personne que le supérieur immédiat, elle fait appel à une approche multisource, et elles peuvent être utilisées sur une base continuelle"
+  },
+  {
+    q: "que permet l’approche multisources?",
+    a: "permet de répondre à deux principales limites associées à l’appréciation traditionnelle de la performance, dont 1) la tâche évaluatrice repose sur un seul individu en impliquant plusieurs perspectives dans la collecte d’information, de mieux observer, documenter et commenter une performance au travail devenue de plus en plus complexe et difficile à saisir, et 2) permet de mieux capter les comportements des individus, une dimension de plus en plus essentielle à la performance au travail"
+  },
+  {
+    q: "quels sont les avantages des évaluations multisources?",
+    a: "1) but de mieux cerner les forces et les zones d’amélioration chez l’évalué, 2) fortement encouragée dans une optique de développement, car elle apporte une richesse supplémentaire que les informations quantitatives ne permettent pas d’apporter, 3) facilite le classement des individus, 4) peut être adapté à un processus visant à soutenir des décision administrative"
+  },
+  {
+    q: "quelles sont les sources les plus couramment utilisés dans les entreprises pour l’évaluation de la performance au travail?",
+    a: "le superviseur, les collègues, les employés, les fournisseurs, les clients et/ou les technologies"
+  },
+  {
+    q: "pourquoi est-ce que le choix des sources représente un facteur particulièrement important?",
+    a: "1) car il teinter la nature ainsi que le contenu du message transmis (contenu du message) , 2) influencer la manière dont l’évaluation et la rétroaction seront accueillies et intégrées par la personne évaluée (crédibilité aux yeux de l’employé évalué)"
+  },
+  {
+    q: "qu’est ce qu’un supérieur hiérarchique?",
+    a: "Un gestionnaire"
+  },
+  {
+    q: "sur quoi repose la crédibilité du gestionnaire?",
+    a: "La crédibilité si gestionnaire repose en grande partie sur la position d’autorité du supérieur immédiat qui détient un pouvoir formel des enjeux souvent importants pour l’évalué, tels que la définition des priorités, l’attribution des ressources et la répartition des récompenses"
+  },
+  {
+    q: "Qu’est-ce que l’évaluation ascendante?",
+    a: "c’est-à-dire aux subordonnés comme source d’évaluation et de rétroaction sur la performance de leurs gestionnaires"
+  },
+  {
+    q: "qu’est-ce que les subordonnés?",
+    a: "employé qui se trouve directement sous la responsabilité et la supervision d'un supérieur immédiat, une source valide de rétroaction et ils sont particulièrement efficaces pour rendre compte des habiletés de gestion de leur supérieur avec qui ils interagissent sur une base régulière"
+  },
+  {
+    q: "nomme des avantages de l’évaluation ascendante/des subordonnés?",
+    a: "1) volonté de rendre la culture de gestion plus participative et moins hiérarchique, ce qui répond aux attentes et aux valeurs des nouvelles générations d’employés, 2) accès à nombre important de sources d’évaluation pouvant être mises en commun, ce qui peut augmenter considérablement la validité des informations recueillies, 3) capacité de leur gestionnaire à formuler des objectifs, à transmettre une rétroaction de qualité et à les soutenir et les développer dans leur travail, voire même à évaluer leur leadership, 4) accroît de façon significative la communication entre le gestionnaire et ses employés, tout en augmentant la satis- faction"
+  },
+  {
+    q: "est-ce possible d’utiliser différentes sources d’appropriation?",
+    a: "Oui, même que les gestionnaires aiment mieux combiner par exemple l’évaluation ascendante avec d’autres sources de rétroaction"
+  },
+  {
+    q: "Vrai ou faux; une évaluation ascendante peut être faite de façon anonyme?",
+    a: "Vrai, et c’est également plus efficace, détaillée et honnête lorsqu’elle est anonyme, à défaut de quoi les employés risquent d’être réticents à révéler certaines lacunes par peur que leur propre évaluation en soit affectée"
+  },
+  {
+    q: "quelle est la norme général admise pour l’évaluation ascendante?",
+    a: "Qu’elle devrait minimalement inclure la perspective de 5 subordonnés afin d’assurer l’anonymat de ces derniers"
+  },
+  {
+    q: "vrai ou faux; l’évaluation ascendante et un bon outil d’évaluation servant également à développer des compétences de gestion chez les gestionnaires et dans la logique d’amélioration continue plutôt que de simplement orienter des décisions administratives telles que sur des promotions ou la rémunération?",
+    a: "Vrai, Ils servent plutôt à développer leurs compétences de gestion dans une logique d’amélioration continue"
+  },
+  {
+    q: "nomme des désavantages d’utiliser les collègues comme source d’évaluation?",
+    a: "peut être biaisée en raison de facteurs tels que l’amitié et le désir de maintenir la cohésion du groupe, les jeux politiques, la compétition pour les ressources, la visibilité ou l’avancement dans l’organisation"
+  },
+  {
+    q: "nomme des avantages relevés de l’évaluation par les pairs de l’étude qui a été réalisée sur des étudiants universitaires?",
+    a: "1) cette pratique en continu durant le parcours universitaire permettait aux étudiants de développer des comportements positifs, tels que l’assiduité au travail et l’aide aux collègues, qui sont transférables une fois sur le marché de l’emploi, 2) se sentaient confiants pour observer et évaluer la performance de leurs collègues, tout en étant plus à l’aise à leur communiquer leur appréciation"
+  },
+  {
+    q: "Avantages de l’autoévaluatoin (source de l’invididu)?",
+    a: "1) permettre aux employés de s’exprimer dans le processus d’évaluation et est ainsi reconnue pour amener une meilleure perception de justice, notamment procédurale, 2) contribue à renforcer leur sentiment d’appartenance, 3) faciliter les discussions de rétroaction et de développement, 4) permettant d’identifier les écarts entre la perception de l’individu qui s’évalue et celle des autres, ce qui peut amener les employés à développer une meilleure conscience de soi"
+  },
+  {
+    q: "nomme des facteurs interne et externe et situationnelle quelle limite l’utilisation de l’auto-apprentissage dans les entreprises?",
+    a: "facteurs internes, tels que l’effort ou les compétences, et à justifier une sous-performance par des causes externes et situationnelles (p. ex. : l’absence de res- sources, le manque de collaboration de certains collègues)"
+  },
+  {
+    q: "désavantage de l’auto évaluation (source de l’individu)?",
+    a: "l’autoévaluation peut influencer le jugement du gestionnaire, surtout lorsque ce dernier peut la consulter avant de remettre sa propre évaluation"
+  },
+  {
+    q: "nomme de désavantage de la source ‘’technologies’’ (système de performance à disposition des gestionnaires?",
+    a: "1) moins efficace dans l’évaluation de dimensions contextuelles et adaptatives de la performance, 2) pas bien reçu par les employés qui peuvent se sentir surveillés et contrôlés donc il peut devenir une source importante de stress, surtout lorsqu’il vise à augmenter l’intensité du travail"
+  },
+  {
+    q: "dans quelles circonstances est-ce qu’un système technologique de performance peut être mieux accepté par les employés?",
+    a: "lorsqu’elle vise un objectif développemental et qu’elle est couplée à d’autres sources d’évaluation. Elle aurait alors comme effet d’augmenter la performance des employés"
+  },
+  {
+    q: "nomme tes exemples de source client qui permet la collecte d’information auprès de la clientèle?",
+    a: "forme de sondage à remplir en ligne ou par téléphone, mais elle peut aussi prendre la forme de clients mystères"
+  },
+  {
+    q: "désavantage de la source client?",
+    a: "1) peuvent difficilement prendre en considération toutes les dimensions de la performance individuelle et collective, 2) état d’appréciations généralement plus négatives que positives donc c’est démodivant pour l’évalué (mais puisque le cœur vise à motiver les individus à performer au travail, les RH doivent donc être prudents)"
+  },
+  {
+    q: "vrai ou faux; le fait d’utiliser différentes sources d’évaluation contribuerait à un biais des évaluateurs?",
+    a: "Faux, puisque la variation entre ces sources n’étant alors pas nécessairement attribuable à un biais des évaluateurs, mais ça peut plutôt refléter un écart réel en termes de performance"
+  },
+  {
+    q: "Le choix de recourir à diverses sources d’évaluation dépend de quels facteurs?",
+    a: "la culture organisationnelle, des objectifs du système de gestion de la performance, de la nature des emplois évalués et des ressources disponibles (p. ex. : temps et argent)"
+  },
+  {
+    q: "Vrai ou faux; il peut être difficile d’implanter l’évaluation ascendante au sein d’une entre- prise où la culture organisationnelle est empreinte d’une forte distance hiérarchique entre les gestionnaires et les employés?",
+    a: "Vrai, Les professionnels en ressources humaines doivent non seulement prendre en considération ces facteurs dans le choix des sources, mais doivent également s’assurer que ces dernières sont à même d’observer les critères à évaluer"
+  },
+  {
+    q: "Quelle évaluation serait la plus utile dans un contexte où le travail réalisé nécessite un niveau d’autonomie élevé et des compétences très spécifique (ex : infirmières, travailleurs sociaux, etc)?",
+    a: "L’autoévaluation"
+  },
+  {
+    q: "Quelle serait la meilleure évaluation dans un contexte de gestion par projets ou au sein d’équipes de travail où les emplois présentent un niveau élevé d’inter- dépendance?",
+    a: "l’évaluation par les collègues"
+  },
+  {
+    q: "quelles sont les 5 sources d’évaluation?",
+    a: "1) Gestionnaire, 2) employés, 3) collègues, 4) clients, 5) technologies"
+  },
+  {
+    q: "quelle serait la meilleure évaluation à effectuer au sein d’une organisation qui promeut la collaboration et/ou l’esprit d’équipe dans ses valeurs organisationnelles?",
+    a: "l’évaluation par les collègues"
+  },
+  {
+    q: "quel est le défi en ressources humaines par rapport aux évaluations?",
+    a: "d’arriver à un équilibre entre les coûts associés à la sollicitation de plusieurs sources par rapport à la valeur ajoutée de l’information recueillie auprès de chacune des sources"
+  },
+  {
+    q: "Que signifi ‘’crowd-sourcing’’?",
+    a: "Une approche rétroactive volontaire et en continu qui consiste à collecter auprès de différents collaborateurs, par exemple des collègues, des clients, des fournisseurs, des informations qualitatives et quantitatives sur la performance des employés, et ce, tout au long de l’année qui permet un suivi des performances plus précis et en continu"
+  },
+  {
+    q: "qu’est-ce que l’évaluation à 360°?",
+    a: "des évaluateurs, préalablement choisis, sont amenés à formuler une évaluation formelle, ça implique un tour complet des collaborateurs et utilisée de façon ponctuelle à des fins diagnostiques des forces et compétences d’un individu"
+  },
+  {
+    q: "quelle est la différence entre l’évaluation ‘’crowd-sourcing’’ Vs l’évaluation à 360 degrés?",
+    a: "1) le crowd-sourcing propose un espace virtuel pour partager de façon volontaire des observations sur la performance d’un individu, observations qui sont saisies et enregistrées tout au long de l’année tandis que l’évaluation 360° est une évaluation formelle préalablement choisi"
+  },
+  {
+    q: "comment fonctionne le le crowd-sourcing?",
+    a: "plateforme de rétroaction offre ainsi la possibilité aux employés de solliciter de la rétroaction sur leur performance auprès de leurs collègues, supérieurs et clients internes selon les comportements sur lesquels les employés souhaitent recevoir de la rétroaction, c’est volontaire d’eux-mêmes et ce système propose une liste structurée de questions à répondre."
+  },
+  {
+    q: "quelles peuvent être les résultats du crowd-sourcing?",
+    a: "les résultats sont pondérés en fonction du degré avec lequel l’évaluateur interagit avec l’évalué. Par exemple, le système accordera plus de valeur aux informations provenant d’un collègue qui interagit quotidiennement avec l’évalué qu’à un fournisseur qui est amené à échanger avec celui-ci une fois par mois"
+  },
+  {
+    q: "quels sont les avantages du crowd-sourcing?",
+    a: "1) permettant de collecter des données de performance issues de diverses perspectives, et ce, en temps réel, 2) outil fort intéressant pour les gestionnaires en leur fournissant des informations plus précises et concrètes pour alimenter leur rétroaction auprès de leurs employés"
+  },
+  {
+    q: "Qu’est-ce que l’évaluation/rétroaction à 360 degrés?",
+    a: "Démarche anonyme systématique d’évaluation fait partie de la famille des approches multisources qui consiste à faire évaluer les comportements d’un employé par tous ses collaborateurs directs et indirects, soit par son supérieur, ses collègues, ses employés et les clients internes et externes, principalement utilisée pour les gestionnaires et les cadres, et mobilise minimum 2 sources différentes (48% selon une étude)"
+  },
+  {
+    q: "Avantages de l’évaluation 360 degrés?",
+    a: "1) perspective d’évaluation diversifiée, équilibrée et crédible aux yeux de l’évalué, 2) meilleure prise de conscience des compétences individuelles, 3) potentiel d’amélioration élevé"
+  },
+  {
+    q: "Quelles sont les limites de l’évaluation à 360 degrés?",
+    a: "1) gens ne donnent pas toujours des commentaires francs et honnêtes, 2) processus lourd et coûteux, 3) peut entraîner de la démotivation et des conflits"
+  },
+  {
+    q: "Quelles sont les règles en terme d’anonymat pour les différentes évaluations?",
+    a: "Évaluation 360 degrés : anonymat essentiel et n’est pas du tout optionnel. Évaluation ascendante : anonymat essentiel et n’est pas du tout optionnel. Évaluation crown-sourcing on évite l’anonymat"
+  },
+  {
+    q: "Est-ce que l’évaluation à 360 degrés a de bonnes conditions de succès?",
+    a: "C’est plutôt mitigé, + : conditions de succès peuvent néanmoins accroître l’efficacité du processus et ses retombées sur la performance des employés et de l’organisation ; principalement au niveau de l’amélioration et du développement des compétences . - : il ramène un manque de résultats concluants"
+  },
+  {
+    q: "Dans quelle situation l’évaluation 360 degrés est plus efficace à gérer?",
+    a: "serait beaucoup plus efficace à générer des changements de comportements positifs lorsque son objectif est essentiellement développemental, l’évaluation à 360 degrés devrait donc être avant tout un outil diagnostic pour développer les compétences des gestionnaires, notamment en leur permettant d’avoir une meilleure connaissance d’eux-mêmes"
+  },
+  {
+    q: "est-ce que l’évaluation 360° peut être négative face à l’égard du processus, comment?",
+    a: "recourir à ce type d’évaluation pour des décisions administratives (p. ex. : rémunération, prime, promotion, etc.) entraîne l’inflation et une perte de confiance à l’égard du processus"
+  },
+  {
+    q: "Que signifie ‘’ politisation’’?",
+    a: "L'absence de critères clairs et factuels : Lorsque les formulaires d'évaluation s'appuient sur des critères vagues ou mal définis, le système laisse une grande place à la subjectivité, ce qui favorise l'apparition de jeux de pouvoir et de favoritisme"
+  },
+  {
+    q: "Quel est l’impact de l’évaluation 360 degré sur les employés?",
+    a: "l’amélioration des compétences des gestionnaires aura un effet positif sur le climat de travail et influencera donc indirectement la performance des individus au travail ; un employé heureux étant généralement plus productif au travail."
+  },
+  {
+    q: "l’évaluation 360° recommande combien d’évaluer mateurs (ex : collègues, subordonnés)?",
+    a: "4 personnes différentes"
+  },
+  {
+    q: "pour l’évaluation 360° qui détermine qui seront les évaluateurs?",
+    a: "L’évaluer décide sa sélection en collaboration avec son gestionnaire"
+  },
+  {
+    q: "A quoi sert principalement l’évaluation à 360°?",
+    a: "sert principalement à identifier les forces et les faiblesses de l’individu et à déterminer les besoins en termes de formation et de coaching, l’interprétation des résultats et la rétroaction subséquente nécessitent un accompagnement individualisé."
+  },
+  {
+    q: "Défini la démarche de l’évaluation à 360 degré et les 5 conditions clés de succès?",
+    a: "Démarche systématique, complète et ponctuelle qui sollicite toutes les personnes que l’individu côtoit, cible principalement gestionnaires/cadres et 4 conditions clés succès : 1) Viser le développement mais pas pour des raisons administratives (rémunération/promotions), 2) anonymat, 3) l’évalué choisi ses évaluateurs avec son gestionnaire, 4) Coaching individualisé inclus par RH ou consultant externe pour bâtir plan développement, 5) nécessite de soumettre l’évalué de deux à quatre fois au processus d’évaluation afin d’engendrer un impact observable sur les comportements\\*\\*\\*"
+  },
+  {
+    q: "quelle est la source la plus crédible et légitime aux yeux des évalués?",
+    a: "Gestionnaires"
+  },
+  {
+    q: "quelles sont les forces et limites de la source des gestionnaires?",
+    a: "Forces : pouvoir formel sur des enjeux importants et pose un jugement global, et plus critique que les autres sources. Limite : difficile pour eux d’observer les employés au quotidien"
+  },
+  {
+    q: "synonyme de subordonnés?",
+    a: "Employés"
+  },
+  {
+    q: "quelles sont les forces et limites de la source des subordonnés/employés?",
+    a: "Forces : rétroaction efficace, détaillée et honnête lorsqu’anonyme et multiple (min 5 employés) source de rétroaction valide et peuvent rendre compte des habiletés de gestion de leur supérieur, donc ça aide au soutien et développement des gestionnaires. Limite : relations de pouvoir et d’influence peuvent teinter les résultats"
+  },
+  {
+    q: "quelles sont les forces et limites de la source des collègues?",
+    a: "Forces : Ils connaissent bien les fonctions, les exigences et les responsabilités du poste de la personne évaluée en plus de pouvoir observer ses comportements au quotidien. Limites : peut être limitée par de potentiels biais (p. ex. amitiés, cohésion de groupe, jeux politiques)"
+  },
+  {
+    q: "quelles sont les forces et limites de la source des technologies?",
+    a: "Forces : utiles pour collecter des informations sur les aspects quantitatifs de la performance et permettent aux gestionnaires de suivre en temps réel la performance au travail. Limites : peut générer du stress auprès des employés et est moins efficaces pour les dimensions contextuelles et adaptatives de la performance"
+  },
+  {
+    q: "quelles sont les forces et les limites de la source clients?",
+    a: "Forces : (interne et externes) évaluer la performance et la qualité du service offert. Limites : peut difficilement prendre en compte sidération toutes les dimensions de la performance individuelle et collective, et l’information obtenue des clients est souvent négative"
+  },
+  {
+    q: "quelles sont les forces et limites de la source individu (l’autoévaluation)?",
+    a: "Forces : 2e+populaire, employés peuvent s’exprimer dans le processus d’évaluation et favorise le partage d’un cadre de référence similaire avec les gestionnaires et leurs employés. Limites : les individus peuvent être indulgents face à leur propre évaluation de performance"
+  },
+  {
+    q: "Le choix de recourir à différentes sources d’évaluation de performance dépend de 4 facteurs. Identifiez-les?",
+    a: "1) La culture organisationnelle, 2) Les objectifs du système de gestion de la performance, 3) La nature des emplois, 4) Les ressources disponibles (temps, argent)"
+  },
+  {
+    q: "Différence entre la méthode méthode crowdsourcing et la méthode 360 degrés?",
+    a: "Contrairement au processus d’évaluation 360 degrés au cours duquel des évaluateurs, préalablement choisis, sont amenés à formuler une évaluation formelle, le *crowdsourcing* propose un espace virtuel pour partager, de façon volontaire, des observations sur la performance d’un individu, observations qui sont saisies et enregistrées tout au long de l’année"
+  },
+  {
+    q: "Nomme des exemples de pistes d’améliorations qui pourraient être ajustés avant de procéder à une prochaine évaluation?",
+    a: "Échantillon : susciter une plus grande participation (p. ex. collaborateurs externes et CA), Approche : demander à la DG de présenter l’initiative à l’interne, Lettre d’introduction : clarifier le contexte de la démarche, l’objectif de développement, les critères de sélection, la date de remise, Fournir un accompagnement à la directrice par le consultant, Communiquer davantage les résultats et faire un meilleur suivi pour augmenter la participation, Simplifier le questionnaire : échelle à quatre niveaux asymétriques, éliminer le dédoublement de compétences, ajouter des sections commentaires, Sources : bien réfléchir à qui peut évaluer quoi parmi les compétences de gestion, Présenter les résultats et les priorités de développement aux groupes impliqués"
+  }
+];let cards = [...originalCards];
+const markedCards = new Set();
+
+function updateErrorCount() {
+  const count = markedCards.size;
+  document.getElementById('errorBadge').textContent = count;
+  document.getElementById('modalErrorCount').textContent = count;
+
+  const total = cards.length;
+  const successful = Math.max(0, total - count);
+  const percentage = total ? Math.round((successful / total) * 100) : 0;
+  document.getElementById('successPercent').textContent = percentage + ' %';
+  document.getElementById('successFill').style.width = percentage + '%';
+  document.querySelector('.success-track').setAttribute('aria-valuenow', percentage);
+  document.getElementById('successDetails').textContent =
+    `${count} carte${count === 1 ? '' : 's'} en rouge · ${successful} carte${successful === 1 ? '' : 's'} réussie${successful === 1 ? '' : 's'} sur ${total}`;
+}
+
+function createCardFace(item, isErrorList = false) {
+  const wrap = document.createElement('div');
+  if (isErrorList) {
+    wrap.className = 'error-card';
+    wrap.innerHTML = `<button class="unmark-btn" type="button" aria-label="Retirer cette carte des cartes d'erreurs" title="Remettre cette carte en normal"></button>
+      <strong>${escapeHtml(item.q)}</strong><div class="answer">${escapeHtml(item.a)}</div>`;
+    wrap.querySelector('.unmark-btn').addEventListener('click', (event) => {
+      event.stopPropagation();
+      markedCards.delete(item);
+      render();
+      renderErrorCards();
+    });
+    wrap.addEventListener('click', () => wrap.classList.toggle('flipped'));
+    return wrap;
+  }
+
+  wrap.className = 'card-wrap' + (markedCards.has(item) ? ' marked' : '');
+  wrap.innerHTML = `
+    <div class="card">
+      <div class="face front">
+        <div>${escapeHtml(item.q)}</div>
+        <div class="hint">Clique pour voir la réponse 👆</div>
+      </div>
+      <div class="face back">
+        <div>${escapeHtml(item.a)}</div>
+        <div class="hint">Clique pour revenir à la question 👆</div>
+      </div>
+    </div>`;
+
+  const markBtn = document.createElement('button');
+  markBtn.className = 'mark-btn' + (markedCards.has(item) ? ' marked' : '');
+  markBtn.type = 'button';
+  markBtn.setAttribute('aria-label', markedCards.has(item) ? 'Retirer des cartes d’erreurs' : 'Marquer cette question comme erreur');
+  markBtn.title = markedCards.has(item) ? 'Carte marquée comme erreur' : 'Marquer comme erreur';
+  wrap.appendChild(markBtn);
+
+  markBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    if (markedCards.has(item)) markedCards.delete(item);
+    else markedCards.add(item);
+    render();
+    renderErrorCards();
+  });
+
+  wrap.addEventListener('click', () => {
+    wrap.querySelector('.card').classList.toggle('flipped');
+  });
+  return wrap;
+}
+
+function render() {
+  const container = document.getElementById('cards');
+  container.innerHTML = '';
+  document.getElementById('count').textContent = cards.length;
+  cards.forEach(item => container.appendChild(createCardFace(item)));
+  updateErrorCount();
+}
+
+function renderErrorCards() {
+  const container = document.getElementById('errorCardsList');
+  container.innerHTML = '';
+  const errorCards = cards.filter(item => markedCards.has(item));
+  document.getElementById('modalErrorCount').textContent = errorCards.length;
+  document.getElementById('errorBadge').textContent = errorCards.length;
+  if (errorCards.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-errors';
+    empty.textContent = 'Aucune carte en rouge pour le moment. Clique sur le point rouge d’une carte pour l’ajouter ici.';
+    container.appendChild(empty);
+    return;
+  }
+  errorCards.forEach(item => container.appendChild(createCardFace(item, true)));
+}
+
+const errorModalOverlay = document.getElementById('errorModalOverlay');
+document.getElementById('errorBubble').addEventListener('click', () => {
+  renderErrorCards();
+  errorModalOverlay.classList.add('open');
+});
+document.getElementById('closeErrorModal').addEventListener('click', () => errorModalOverlay.classList.remove('open'));
+errorModalOverlay.addEventListener('click', event => {
+  if (event.target === errorModalOverlay) errorModalOverlay.classList.remove('open');
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') errorModalOverlay.classList.remove('open');
+});
+
+function escapeHtml(value) {
+  return value
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'","&#039;");
+}
+
+document.getElementById('shuffleBtn').addEventListener('click', () => {
+  for (let i = cards.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cards[i], cards[j]] = [cards[j], cards[i]];
+  }
+  render();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+});
+
+render();
+</script>
+</body>
+</html>
